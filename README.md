@@ -1,5 +1,6 @@
-# Test LibOsmScout Functions on Windows with VC2017
-Buil on Linux may by possible Cmake ist used
+# Test LibOsmScout Navi Routing Functions
+Build on Linux Ok
+Build on Windows Crash
 
 ## Build Osmscout with windows an MSVC 2017
 
@@ -30,3 +31,4 @@ set CMAKE_LIBRARY_PATH=%MARISA_ROOT%\lib
 
 cmake -G "Visual Studio 15 2017 Win64" -DQTDIR=%QTDIR% -DCMAKE_PREFIX_PATH=%QTDIR%/lib/cmake -DCMAKE_INSTALL_PREFIX=.\output -DCMAKE_TOOLCHAIN_FILE=F:/Mine/OpenSource/vcpkg/scripts/buildsystems/vcpkg.cmake ..
 cmake --build . --target install --config Debug
+cmake --build . --target install --config Release

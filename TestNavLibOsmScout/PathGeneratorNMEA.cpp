@@ -50,7 +50,7 @@ bool PathGeneratorNMEA::GenerateSteps() {
 					auto distance = GetEllipsoidalDistance(currentPos, lastPos);
 					const auto distanceInKilometer = distance.As<osmscout::Kilometer>();
 					const auto timeInHours = distanceInKilometer / speed;
-					LONGLONG timeInSeconds = timeInHours * 60 * 60;
+					int64_t timeInSeconds = timeInHours * 60 * 60;
 					time += std::chrono::seconds(timeInSeconds);
 					steps.emplace_back(time, speed, currentPos);
 				}

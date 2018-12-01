@@ -22,6 +22,13 @@ MESSAGE(STATUS "VCPKG $ENV{VCPKG_ROOT}")
 
 project ("TestNavLibOsmScout")
 
+CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+IF(COMPILER_SUPPORTS_CXX11)
+   SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+ELSE()
+   message(ERROR "we need c++11 to build")
+ENDIF()
+
 MESSAGE(STATUS "Try Build ${PROJECT_NAME}")
 message(STATUS "Compiler ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "Building on ${CMAKE_SYSTEM_NAME}")

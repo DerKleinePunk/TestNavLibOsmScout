@@ -16,10 +16,11 @@ void Simulator::ProcessMessages(const std::list<osmscout::NavigationMessageRef>&
 {
 	for (const auto& message : messages) {
 		if (dynamic_cast<osmscout::PositionChangedMessage*>(message.get()) != nullptr) {
-			//auto positionChangedMessage=dynamic_cast<osmscout::PositionChangedMessage*>(message.get());
+			const auto positionChangedMessage=dynamic_cast<osmscout::PositionChangedMessage*>(message.get());
+			std::cout << positionChangedMessage->currentPosition.GetDisplayText() <<  " Speed " << positionChangedMessage->currentSpeed << std::endl;
 		}
 		if (dynamic_cast<osmscout::BearingChangedMessage*>(message.get()) != nullptr) {
-			auto bearingChangedMessage = dynamic_cast<osmscout::BearingChangedMessage*>(message.get());
+			const auto bearingChangedMessage = dynamic_cast<osmscout::BearingChangedMessage*>(message.get());
 
 			auto bearingString = bearingChangedMessage->hasBearing ? osmscout::BearingDisplayString(bearingChangedMessage->bearing) : "";
 			if (lastBearingString != bearingString) {

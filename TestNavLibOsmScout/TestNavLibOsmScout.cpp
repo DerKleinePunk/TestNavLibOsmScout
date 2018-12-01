@@ -171,16 +171,20 @@ int main(int argc, char *argv[])
 
 	START_EASYLOGGINGPP(argc, argv);
 
+	std::string mapDirectory;
+	std::string nmeaFile;
+
 	std::cout << "Hello we tray test LibOsmScout Navi Class" << std::endl;
 	if(argc < 3) {
 		std::cout << "Missing commandline Parameters" << std::endl;
 		std::cout << "Please Call TestNavLibOsmScout <map directory> <nmeafile>" << std::endl;
-		return -1;
+		mapDirectory = "/home/punky/develop/libosmscout-code/maps/hessen-latest";
+		nmeaFile = "/home/punky/develop/GPS-Adnan-Tour.txt";
+	} else {
+		mapDirectory = argv[1];
+		nmeaFile = argv[2];
 	}
-
-	const std::string mapDirectory = argv[1];
-	const std::string nmeaFile = argv[2];
-
+	
 	osmscout::DatabaseParameter databaseParameter;
 	auto database = std::make_shared<osmscout::Database>(databaseParameter);
 
@@ -212,9 +216,12 @@ int main(int argc, char *argv[])
 	routingProfile->ParametrizeForCar(*typeConfig,
 		carSpeedTable,
 		160.0);
-	
-	double startLat;
-	double startLon;
+
+	//50.408889 9.367222 50.2741053 9.3721825
+	double startLat = 50.41016;
+	double startLon = 9.36519;
+	double targetLat = 50.27399;
+	double targetLon = 9.37022;
 
 	if (!GetFirstPosInFile(nmeaFile, startLat, startLon)) {
 		std::cerr << "Cannot finde a start pos in file" << std::endl;
@@ -236,10 +243,7 @@ int main(int argc, char *argv[])
 	if (start.GetObjectFileRef().GetType() == osmscout::refNode) {
 		std::cerr << "Cannot find start node for start location!" << std::endl;
 	}
-
-	double targetLat;
-	double targetLon;
-
+	
 	if (!GetLastPosInFile(nmeaFile, startLat, startLon, targetLat, targetLon)) {
 		std::cerr << "Cannot finde a last pos in file" << std::endl;
 		return -6;
@@ -355,13 +359,13 @@ int main(int argc, char *argv[])
 	if (!gpxFileTour.empty()) {
 		DumpGpxFile(gpxFileTour,
 			routePointsResult.points->points,
-			pathGenerator2);
+			pathGenerator);
 	}
 
 	Simulator simulator;
 
 	simulator.Simulate(database,
-		pathGenerator,
+		pathGenerator2,
 		routePointsResult.points);
 
 	router->Close();

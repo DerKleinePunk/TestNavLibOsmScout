@@ -38,12 +38,13 @@ bool PathGeneratorNMEA::GenerateSteps() {
 	while (std::getline(file, line)) {
 		if (decoder.Decode(line)) {
 			//LOG(DEBUG) << "Line Read and decode " << line;
-			if (decoder.IsPositionValid() && decoder.IsSpeedValid()) {
+			if (decoder.IsPositionValid() && decoder.IsSpeedValid() && decoder.IsTimestampValid()) {
 				const auto curtargetLat = decoder.GetLatitude();
 				const auto curtargetLon = decoder.GetLongitude();
 				const auto speed = decoder.GetSpeed();
 				const osmscout::GeoCoord currentPos(curtargetLat, curtargetLon);
-				if(lastPos.GetLat() == 0) {
+				steps.emplace_back(std::chrono::system_clock::from_time_t(decoder.GetTimestamp()), speed, currentPos);
+				/*if(lastPos.GetLat() == 0) {
 					steps.emplace_back(time, speed, currentPos);
 					lastPos.Set(curtargetLat, curtargetLon);
 				} else {
@@ -53,7 +54,7 @@ bool PathGeneratorNMEA::GenerateSteps() {
 					int64_t timeInSeconds = timeInHours * 60 * 60;
 					time += std::chrono::seconds(timeInSeconds);
 					steps.emplace_back(time, speed, currentPos);
-				}
+				}*/
 			}
 		}
 	}

@@ -21,7 +21,7 @@ else()
 endif()
 
 # Fügen Sie der ausführbaren Datei dieses Projekts eine Quelle hinzu.
-add_executable (${project_BIN} "TestNavLibOsmScout.cpp" "TestNavLibOsmScout.h" "utils/easylogging++.cc" "NMEADecoder.cpp" "Tokenizer.cpp" "PathGenerator.cpp" "Simulator.cpp" "PathGeneratorNMEA.cpp")
+add_executable (${project_BIN} "TestNavLibOsmScout.cpp" "TestNavLibOsmScout.h" "utils/easylogging++.cc" "NMEADecoder.cpp" "Tokenizer.cpp" "PathGenerator.cpp" "Simulator.cpp" "PathGeneratorNMEA.cpp" "NavigationDescription.cpp")
 
 if(OSMSCOUT_FOUND)
     TARGET_LINK_LIBRARIES(${project_BIN} ${OSMSCOUT_LIBRARIES})

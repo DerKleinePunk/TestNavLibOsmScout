@@ -120,7 +120,7 @@ void DumpGpxFile(const std::string& fileName,
 
 	stream.precision(8);
 	stream << R"(<?xml version="1.0" encoding="UTF-8" standalone="no" ?>)" << std::endl;
-	stream << R"(<gpx xmlns="http://www.topografix.com/GPX/1/1" creator="bin2gpx" version="1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">)"
+	stream << R"(<gpx xmlns="http://www.topografix.com/GPX/1/1" creator="TestNavLibOsmScout" version="0.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">)"
 		<< std::endl;
 
 	stream << "\t<wpt lat=\"" << generator.steps.front().coord.GetLat() << "\" lon=\"" << generator.steps.front().coord.GetLon() << "\">" << std::endl;
@@ -276,6 +276,9 @@ int main(int argc, char *argv[])
 		return -8;
 	}
 
+	const auto routingDistance = routingResult.GetOverallDistance().AsMeter();
+	std::cout << routingDistance << "m bis zum Ziel" << std::endl;
+
 	osmscout::RoutePointsResult routePointsResult = router->TransformRouteDataToPoints(routingResult.GetRoute());
 
 	if (!routePointsResult.success) {
@@ -344,6 +347,7 @@ int main(int argc, char *argv[])
 	generateTimer.Stop();
 
 	std::cout << "Description generation time: " << generateTimer.ResultString() << std::endl;
+	
 
 	PathGenerator pathGenerator(*routeDescriptionResult.description, routingProfile->GetVehicleMaxSpeed());
 
@@ -359,14 +363,15 @@ int main(int argc, char *argv[])
 	if (!gpxFileTour.empty()) {
 		DumpGpxFile(gpxFileTour,
 			routePointsResult.points->points,
-			pathGenerator);
+			pathGenerator2);
 	}
 
 	Simulator simulator;
 
 	simulator.Simulate(database,
 		pathGenerator2,
-		routePointsResult.points);
+		routePointsResult.points,
+		routeDescriptionResult.description);
 
 	router->Close();
 

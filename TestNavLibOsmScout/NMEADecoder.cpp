@@ -27,18 +27,19 @@
 #define KMPH    1.852       // kilometers-per-hour in one knot
 #define MPH     1.1507794   // miles-per-hour in one knot
 
-NMEADecoder::NMEADecoder(): 
-    _geoLat(0),
-    _geoLon(0),
-    _speed(0),
-    _compass(-1),
-    _posValid(false),
-    _timestampValid(false),
-    _speedValid(false), 
-    _compassValid(false),
-    _lastTime(0),
-    _satelliteOnline(false) { 
-    el::Loggers::getLogger(ELPP_DEFAULT_LOGGER);
+NMEADecoder::NMEADecoder():
+	_geoLat(0),
+	_geoLon(0),
+	_speed(0),
+	_compass(-1),
+	_posValid(false),
+	_timestampValid(false),
+	_speedValid(false),
+	_compassValid(false),
+	_lastTimestamp(0), 
+	_lastTime(),
+	_satelliteOnline(false) {
+	el::Loggers::getLogger(ELPP_DEFAULT_LOGGER);
 }
 
 NMEADecoder::~NMEADecoder() {
@@ -81,27 +82,24 @@ void NMEADecoder::DecodeGPGLL() {
 }
 
 void NMEADecoder::DecodeUtcTime(const std::string& time) {
-	//withou seperator vs2015 can't decode the Time MS Bug ?
+	//without seperator vs2015 can't decode the Time MS Bug ?
 	//Todo Corrent this we need two thinks an TimeStamp in local time and the di form last position update on linux and windows with micro sekonds
 	static const std::string dateTimeFormat{ "%H:%M:%S" };
 	auto timeLocal = time;
-	auto j = timeLocal.find_first_of(".");
+	const auto j = timeLocal.find_first_of('.');
 	if (std::string::npos != j)
 	{
 		timeLocal = timeLocal.substr(0,j);
 	}
 	timeLocal = timeLocal.substr(0, 2) + ":" + timeLocal.substr(2);
 	timeLocal = timeLocal.substr(0, 5) + ":" + timeLocal.substr(5);
-	std::tm dt;
 	std::istringstream input(timeLocal);
 	input.imbue(std::locale(setlocale(LC_ALL, nullptr)));
-	input >> std::get_time(&dt, dateTimeFormat.c_str());
+	input >> std::get_time(&_lastTime, dateTimeFormat.c_str());
 	if(input.fail()) {
 		LOG(WARNING) << "Date convert Failed";
 		return;
 	}
-	
-	_lastTime = mktime(&dt);
 }
 
 void NMEADecoder::DecodeLat(const std::string& richtung, const std::string& value) {
@@ -126,6 +124,29 @@ void NMEADecoder::DecodeLon(const std::string& richtung, const std::string& valu
 	}
 }
 
+void NMEADecoder::DecodeDate(const std::string& dateString) {
+	static const std::string dateTimeFormat{ "%d.%m.%Y" };
+	auto dateLocal = dateString;
+	dateLocal = dateLocal.substr(0, 2) + "." + dateLocal.substr(2);
+	dateLocal = dateLocal.substr(0, 5) + ".20" + dateLocal.substr(5);
+
+	std::tm dt{};
+	std::istringstream input(dateLocal);
+	input.imbue(std::locale(setlocale(LC_ALL, nullptr)));
+	input >> std::get_time(&dt, dateTimeFormat.c_str());
+	if (input.fail()) {
+		LOG(WARNING) << "Date convert Failed";
+		return;
+	}
+
+	dt.tm_hour = _lastTime.tm_hour;
+	dt.tm_sec = _lastTime.tm_sec;
+	dt.tm_min = _lastTime.tm_min;
+
+	_lastTimestamp = std::mktime(&dt);
+	_timestampValid = true;
+}
+
 void NMEADecoder::DecodeGPRMC() {
 	//Recommended minimum specific GNSS data
 	DecodeUtcTime(_data[1]);
@@ -144,8 +165,9 @@ void NMEADecoder::DecodeGPRMC() {
 				_compass = std::stof(_data[8]); //Bewegungsrichtung in Grad
 			}
             if(_data.size() >= 9){
-                if(_data[9].length() > 0) {
+                if(!_data[9].empty()) {
                     //Not all GPS send this
+					DecodeDate(_data[9]);
                 }
             }
 		}
@@ -161,6 +183,7 @@ bool NMEADecoder::CheckCRC() {
 }
 
 bool NMEADecoder::Decode(const std::string& line) {
+	_timestampValid = false;
 	_data.clear();
 	Tokenizer tokenizer(line, ",*");
 	
@@ -208,6 +231,10 @@ bool NMEADecoder::IsCompassValid() const {
 	return _compassValid;
 }
 
+bool NMEADecoder::IsTimestampValid() const {
+	return _timestampValid;
+}
+
 double NMEADecoder::GetLatitude() const {
 	return _geoLat;
 }
@@ -222,4 +249,8 @@ double NMEADecoder::GetSpeed() const {
 
 double NMEADecoder::GetCompass() const {
 	return _compass;
+}
+
+std::time_t NMEADecoder::GetTimestamp() const {
+	return _lastTimestamp;
 }

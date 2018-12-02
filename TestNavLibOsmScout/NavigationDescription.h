@@ -1,7 +1,6 @@
-﻿// TestNavLibOsmScout.h: Includedatei für Include-Standardsystemdateien
-// oder projektspezifische Includedateien.
-
 #pragma once
+#ifndef NAVIGATIONDESCRIPTION_H
+#define NAVIGATIONDESCRIPTION_H
 
 #include <osmscout/navigation/Navigation.h>
 #include <osmscout/GeoCoord.h>
@@ -10,11 +9,11 @@ namespace osmscout {
 
 	struct NodeDescription
 	{
-		int         roundaboutExitNumber;
-		int         index;
+		int         roundaboutExitNumber{};
+		int         index{};
 		std::string instructions;
 		Distance    distance;
-		double      time;
+		double      time{};
 		GeoCoord    location;
 	};
 
@@ -229,7 +228,7 @@ namespace osmscout {
 			_description.time = waypoint->GetTime();
 			_description.location = waypoint->GetLocation();
 			_previousDistance = _description.distance;
-			waypoint++;
+			++waypoint;
 		}
 
 		NodeDescription GetDescription()
@@ -252,3 +251,4 @@ namespace osmscout {
 	};
 }
 
+#endif //NAVIGATIONDESCRIPTION_H

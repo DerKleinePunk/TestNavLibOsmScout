@@ -6,10 +6,26 @@
 
 #include "Simulator.h"
 #include "PathGenerator.h"
+#include <iomanip>
+
+static std::string TimeToString(double time)
+{
+	std::ostringstream stream;
+	stream << std::setfill(' ') << std::setw(2) << (int)std::floor(time) << ":";
+	time -= std::floor(time);
+	stream << std::setfill('0') << std::setw(2) << (int)floor(60 * time + 0.5);
+	return stream.str();
+}
 
 Simulator::Simulator()
-	: routeState(osmscout::RouteStateChangedMessage::State::noRoute)
-{
+	: routeState(osmscout::RouteStateChangedMessage::State::noRoute), _navigation(nullptr), _onRoute(false) {
+}
+
+Simulator::~Simulator() {
+	if(_streamGpxFile.is_open()) {
+		_streamGpxFile << "</gpx>" << std::endl;
+		_streamGpxFile.close();
+	}
 }
 
 void Simulator::ProcessMessages(const std::list<osmscout::NavigationMessageRef>& messages)
@@ -17,7 +33,48 @@ void Simulator::ProcessMessages(const std::list<osmscout::NavigationMessageRef>&
 	for (const auto& message : messages) {
 		if (dynamic_cast<osmscout::PositionChangedMessage*>(message.get()) != nullptr) {
 			const auto positionChangedMessage=dynamic_cast<osmscout::PositionChangedMessage*>(message.get());
-			std::cout << positionChangedMessage->currentPosition.GetDisplayText() <<  " Speed " << positionChangedMessage->currentSpeed << std::endl;
+			//std::cout << positionChangedMessage->currentPosition.GetDisplayText() <<  " Speed " << positionChangedMessage->currentSpeed << std::endl;
+			/*osmscout::ClosestRoutableObjectResult routableResult = router->GetClosestRoutableObject(location,
+				routingProfile->GetVehicle(),
+				osmscout::Distance::Of<osmscout::Meter>(100));*/
+			auto minDistance = 0.0;
+			auto result = _navigation.UpdateCurrentLocation(positionChangedMessage->currentPosition, minDistance);
+			const auto desc = _navigation.nextWaypointDescription();
+			//std::cout << desc.distance.AsMeter() << std::endl;
+			auto distance = osmscout::GetEllipsoidalDistance(positionChangedMessage->currentPosition, desc.location);
+			const auto distanceInMeter = distance.As<osmscout::Meter>();
+			if (distanceInMeter <= 100 && _lastInstructions != desc.instructions) {
+				std::cout << "Distance to route: " << minDistance << " ?" << std::endl;
+				std::cout << "Distance to destination: " << _navigation.GetDistance().AsMeter() << std::endl;
+				std::cout << "Time to destination: " << TimeToString(_navigation.GetDuration()) << std::endl;
+				std::cout << "Next routing instructions: " << desc.instructions << std::endl;
+				_lastInstructions = desc.instructions;
+			}
+
+			if(result != _onRoute) {
+				if(result) {
+					std::cout << "route" << std::endl;
+					_streamGpxFile << "\t<wpt lat=\"" << desc.location.GetLat() << "\" lon=\"" << desc.location.GetLon() << "\">" << std::endl;
+					_streamGpxFile << "\t\t<name>Route found</name>" << std::endl;
+					_streamGpxFile << "\t\t<fix>2d</fix>" << std::endl;
+					_streamGpxFile << "\t</wpt>" << std::endl;
+					_streamGpxFile << "\t<wpt lat=\"" << positionChangedMessage->currentPosition.GetLat() << "\" lon=\"" << positionChangedMessage->currentPosition.GetLon() << "\">" << std::endl;
+					_streamGpxFile << "\t\t<name>Car</name>" << std::endl;
+					_streamGpxFile << "\t\t<fix>2d</fix>" << std::endl;
+					_streamGpxFile << "\t</wpt>" << std::endl;
+				} else {
+					std::cout << "route verlassen" << std::endl;
+					_streamGpxFile << "\t<wpt lat=\"" << desc.location.GetLat() << "\" lon=\"" << desc.location.GetLon() << "\">" << std::endl;
+					_streamGpxFile << "\t\t<name>Route lost</name>" << std::endl;
+					_streamGpxFile << "\t\t<fix>2d</fix>" << std::endl;
+					_streamGpxFile << "\t</wpt>" << std::endl;
+					_streamGpxFile << "\t<wpt lat=\"" << positionChangedMessage->currentPosition.GetLat() << "\" lon=\"" << positionChangedMessage->currentPosition.GetLon() << "\">" << std::endl;
+					_streamGpxFile << "\t\t<name>Car</name>" << std::endl;
+					_streamGpxFile << "\t\t<fix>2d</fix>" << std::endl;
+					_streamGpxFile << "\t</wpt>" << std::endl;
+				}
+				_onRoute = result;
+			}
 		}
 		if (dynamic_cast<osmscout::BearingChangedMessage*>(message.get()) != nullptr) {
 			const auto bearingChangedMessage = dynamic_cast<osmscout::BearingChangedMessage*>(message.get());
@@ -67,7 +124,8 @@ void Simulator::ProcessMessages(const std::list<osmscout::NavigationMessageRef>&
 
 void Simulator::Simulate(const osmscout::DatabaseRef& database,
 	const IPathGenerator& generator,
-	const osmscout::RoutePointsRef& routePoints)
+	const osmscout::RoutePointsRef& routePoints,
+	const osmscout::RouteDescriptionRef& description)
 {
 	auto locationDescriptionService = std::make_shared<osmscout::LocationDescriptionService>(database);
 
@@ -79,9 +137,28 @@ void Simulator::Simulate(const osmscout::DatabaseRef& database,
 	  std::make_shared<osmscout::RouteStateAgent>(),
 	};
 
-	auto initializeMessage = std::make_shared<osmscout::InitializeMessage>(generator.steps.front().time);
+	const auto initializeMessage = std::make_shared<osmscout::InitializeMessage>(generator.steps.front().time);
 
 	ProcessMessages(engine.Process(initializeMessage));
+	_navigation = new osmscout::NavigationDescription<osmscout::NodeDescription>;
+	_navigation.SetSnapDistance(osmscout::Distance::Of<osmscout::Meter>(100.0));
+	_navigation.SetRoute(description.get());
+
+	_streamGpxFile.open("routeLife.gpx", std::ofstream::trunc);
+	_streamGpxFile.precision(8);
+	_streamGpxFile << R"(<?xml version="1.0" encoding="UTF-8" standalone="no" ?>)" << std::endl;
+	_streamGpxFile << R"(<gpx xmlns="http://www.topografix.com/GPX/1/1" creator="TestNavLibOsmScout" version="0.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">)"
+		<< std::endl;
+
+	_streamGpxFile << "\t<wpt lat=\"" << generator.steps.front().coord.GetLat() << "\" lon=\"" << generator.steps.front().coord.GetLon() << "\">" << std::endl;
+	_streamGpxFile << "\t\t<name>Start</name>" << std::endl;
+	_streamGpxFile << "\t\t<fix>2d</fix>" << std::endl;
+	_streamGpxFile << "\t</wpt>" << std::endl;
+
+	_streamGpxFile << "\t<wpt lat=\"" << generator.steps.back().coord.GetLat() << "\" lon=\"" << generator.steps.back().coord.GetLon() << "\">" << std::endl;
+	_streamGpxFile << "\t\t<name>Target</name>" << std::endl;
+	_streamGpxFile << "\t\t<fix>2d</fix>" << std::endl;
+	_streamGpxFile << "\t</wpt>" << std::endl;
 
 	// TODO: Simulator possibly should not send this message on start but later on to simulate driver starting before
 	// getting route

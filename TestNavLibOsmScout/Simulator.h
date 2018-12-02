@@ -13,6 +13,7 @@ class Simulator
 	std::string _lastInstructions;
 	bool _onRoute;
 	std::ofstream _streamGpxFile;
+	int _errorCount;
 	void ProcessMessages(const std::list<osmscout::NavigationMessageRef>& messages);
 
 public:

@@ -18,7 +18,8 @@ static std::string TimeToString(double time)
 }
 
 Simulator::Simulator()
-	: routeState(osmscout::RouteStateChangedMessage::State::noRoute), _navigation(nullptr), _onRoute(false) {
+	: routeState(osmscout::RouteStateChangedMessage::State::noRoute), _navigation(nullptr), _onRoute(false),
+	  _errorCount(0) {
 }
 
 Simulator::~Simulator() {
@@ -55,25 +56,26 @@ void Simulator::ProcessMessages(const std::list<osmscout::NavigationMessageRef>&
 				if(result) {
 					std::cout << "route" << std::endl;
 					_streamGpxFile << "\t<wpt lat=\"" << desc.location.GetLat() << "\" lon=\"" << desc.location.GetLon() << "\">" << std::endl;
-					_streamGpxFile << "\t\t<name>Route found</name>" << std::endl;
+					_streamGpxFile << "\t\t<name>Route found "<< std::to_string(_errorCount) << "</name>" << std::endl;
 					_streamGpxFile << "\t\t<fix>2d</fix>" << std::endl;
 					_streamGpxFile << "\t</wpt>" << std::endl;
 					_streamGpxFile << "\t<wpt lat=\"" << positionChangedMessage->currentPosition.GetLat() << "\" lon=\"" << positionChangedMessage->currentPosition.GetLon() << "\">" << std::endl;
-					_streamGpxFile << "\t\t<name>Car</name>" << std::endl;
+					_streamGpxFile << "\t\t<name>Car Point" << std::to_string(_errorCount) << "</name>" << std::endl;
 					_streamGpxFile << "\t\t<fix>2d</fix>" << std::endl;
 					_streamGpxFile << "\t</wpt>" << std::endl;
 				} else {
 					std::cout << "route verlassen" << std::endl;
 					_streamGpxFile << "\t<wpt lat=\"" << desc.location.GetLat() << "\" lon=\"" << desc.location.GetLon() << "\">" << std::endl;
-					_streamGpxFile << "\t\t<name>Route lost</name>" << std::endl;
+					_streamGpxFile << "\t\t<name>Route lost " << std::to_string(_errorCount) << "</name>" << std::endl;
 					_streamGpxFile << "\t\t<fix>2d</fix>" << std::endl;
 					_streamGpxFile << "\t</wpt>" << std::endl;
 					_streamGpxFile << "\t<wpt lat=\"" << positionChangedMessage->currentPosition.GetLat() << "\" lon=\"" << positionChangedMessage->currentPosition.GetLon() << "\">" << std::endl;
-					_streamGpxFile << "\t\t<name>Car</name>" << std::endl;
+					_streamGpxFile << "\t\t<name>Car Point" << std::to_string(_errorCount) << "</name>" << std::endl;
 					_streamGpxFile << "\t\t<fix>2d</fix>" << std::endl;
 					_streamGpxFile << "\t</wpt>" << std::endl;
 				}
 				_onRoute = result;
+				_errorCount++;
 			}
 		}
 		if (dynamic_cast<osmscout::BearingChangedMessage*>(message.get()) != nullptr) {

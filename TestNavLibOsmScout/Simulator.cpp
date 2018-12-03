@@ -38,6 +38,7 @@ void Simulator::ProcessMessages(const std::list<osmscout::NavigationMessageRef>&
 			/*osmscout::ClosestRoutableObjectResult routableResult = router->GetClosestRoutableObject(location,
 				routingProfile->GetVehicle(),
 				osmscout::Distance::Of<osmscout::Meter>(100));*/
+			_lastGeopos = positionChangedMessage->currentPosition;
 			auto minDistance = 0.0;
 			auto result = _navigation.UpdateCurrentLocation(positionChangedMessage->currentPosition, minDistance);
 			const auto desc = _navigation.nextWaypointDescription();
@@ -94,6 +95,13 @@ void Simulator::ProcessMessages(const std::list<osmscout::NavigationMessageRef>&
 
 			std::cout << osmscout::TimestampToISO8601TimeString(streetChangedMessage->timestamp)
 				<< " Street name: " << streetChangedMessage->name << std::endl;
+			
+			_streamGpxFile << "\t<wpt lat=\"" << _lastGeopos.GetLat() << "\" lon=\"" << _lastGeopos.GetLon() << "\">" << std::endl;
+			_streamGpxFile << "\t\t<name>Streetname (" << streetChangedMessage->name << ")" << std::to_string(_errorCount) << "</name>" << std::endl;
+			_streamGpxFile << "\t\t<fix>2d</fix>" << std::endl;
+			_streamGpxFile << "\t</wpt>" << std::endl;
+
+			_errorCount++;
 		}
 		else if (dynamic_cast<osmscout::RouteStateChangedMessage*>(message.get()) != nullptr) {
 			auto routeStateChangedMessage = dynamic_cast<osmscout::RouteStateChangedMessage*>(message.get());

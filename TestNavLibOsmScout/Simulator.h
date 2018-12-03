@@ -14,6 +14,7 @@ class Simulator
 	bool _onRoute;
 	std::ofstream _streamGpxFile;
 	int _errorCount;
+	osmscout::GeoCoord _lastGeopos;
 	void ProcessMessages(const std::list<osmscout::NavigationMessageRef>& messages);
 
 public:

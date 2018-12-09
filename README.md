@@ -1,6 +1,6 @@
 # Test LibOsmScout Navi Routing Functions
 Build on Linux Ok
-Build on Windows Crash
+Build on Windows Ok
 
 ## Build Osmscout with windows an MSVC 2017
 
